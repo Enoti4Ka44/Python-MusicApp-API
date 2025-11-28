@@ -13,7 +13,13 @@ from app.models.user import User
 router = APIRouter(prefix="/playlists", tags=["Playlists"])
 
 # Создание
-@router.post("/", response_model=PlaylistResponse)
+@router.post("/", 
+    response_model=PlaylistResponse,
+    summary="Create a new playlist",
+    description=(
+        "Создает новый плейлист, пренадлежащий авторизованному юзеру. " 
+        "Если track_id указаны, то они добавляются в плейлист "
+    ))
 async def create_playlist(
     data: PlaylistCreate,
     current_user: User = Depends(get_current_user),
@@ -59,7 +65,11 @@ async def create_playlist(
 
 
 # Получить все плейлисты (свои)
-@router.get("/", response_model=List[PlaylistResponse])
+@router.get("/", response_model=List[PlaylistResponse],
+    summary="Get all user playlists",
+    description=(
+        "Возвращает список всех плейлистов, принадлежащих авторизованному юзеру. " 
+    ))
 async def get_playlists(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -90,7 +100,12 @@ async def get_playlists(
 
 
 # Получить плейлист по id
-@router.get("/{playlist_id}", response_model=PlaylistResponse)
+@router.get("/{playlist_id}", response_model=PlaylistResponse,
+    summary="Get playlist by ID",
+    description=(
+        "Возвращает информацию о плейлисте, принадлежащему авторизованному юзеру. " 
+        "Иначе возвращает ошибку доступа "
+    ))
 async def get_playlist(
     playlist_id: int,
     current_user: User = Depends(get_current_user),
@@ -121,7 +136,12 @@ async def get_playlist(
 
 
 # Обновление
-@router.put("/{playlist_id}", response_model=PlaylistResponse)
+@router.put("/{playlist_id}", response_model=PlaylistResponse,
+    summary="Update playlist",
+    description=(
+        "Обновляет название и список треков плейлиста. " 
+        "Доступно только его владельцу"
+    ))
 async def update_playlist(
     playlist_id: int,
     data: PlaylistCreate,
@@ -176,7 +196,12 @@ async def update_playlist(
 
 
 # Удаление
-@router.delete("/{playlist_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{playlist_id}", status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete playlist",
+    description=(
+        "Удаляет плейлист, пренадлежащий авторизованному пользователю. " 
+        "Доступно только его владельцу"
+    ))
 async def delete_playlist(
     playlist_id: int,
     current_user: User = Depends(get_current_user),
