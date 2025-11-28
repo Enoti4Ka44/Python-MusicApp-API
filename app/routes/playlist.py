@@ -6,14 +6,14 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import get_db
 from app.models import Playlist, PlaylistTrack, Track
-from app.schemas.playlist import PlaylistCreate, PlaylistOut
+from app.schemas.playlist import PlaylistCreate, PlaylistResponse
 from app.auth.dependencies import get_current_user
 from app.models.user import User
 
 router = APIRouter(prefix="/playlists", tags=["Playlists"])
 
 # Создание
-@router.post("/", response_model=PlaylistOut)
+@router.post("/", response_model=PlaylistResponse)
 async def create_playlist(
     data: PlaylistCreate,
     current_user: User = Depends(get_current_user),
@@ -46,7 +46,7 @@ async def create_playlist(
         )
         track_ids = [t[0] for t in result.all()]
 
-        return PlaylistOut(
+        return PlaylistResponse(
             id=new_playlist.id,
             name=new_playlist.name,
             owner_id=new_playlist.owner_id,
@@ -59,7 +59,7 @@ async def create_playlist(
 
 
 # Получить все плейлисты (свои)
-@router.get("/", response_model=List[PlaylistOut])
+@router.get("/", response_model=List[PlaylistResponse])
 async def get_playlists(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -75,7 +75,7 @@ async def get_playlists(
             )
             track_ids = [t[0] for t in tracks_result.all()]
             playlists_out.append(
-                PlaylistOut(
+                PlaylistResponse(
                     id=p.id,
                     name=p.name,
                     owner_id=p.owner_id,
@@ -90,7 +90,7 @@ async def get_playlists(
 
 
 # Получить плейлист по id
-@router.get("/{playlist_id}", response_model=PlaylistOut)
+@router.get("/{playlist_id}", response_model=PlaylistResponse)
 async def get_playlist(
     playlist_id: int,
     current_user: User = Depends(get_current_user),
@@ -109,7 +109,7 @@ async def get_playlist(
         )
         track_ids = [t[0] for t in tracks_result.all()]
 
-        return PlaylistOut(
+        return PlaylistResponse(
             id=playlist.id,
             name=playlist.name,
             owner_id=playlist.owner_id,
@@ -121,7 +121,7 @@ async def get_playlist(
 
 
 # Обновление
-@router.put("/{playlist_id}", response_model=PlaylistOut)
+@router.put("/{playlist_id}", response_model=PlaylistResponse)
 async def update_playlist(
     playlist_id: int,
     data: PlaylistCreate,
@@ -163,7 +163,7 @@ async def update_playlist(
         )
         track_ids = [t[0] for t in tracks_result.all()]
 
-        return PlaylistOut(
+        return PlaylistResponse(
             id=playlist.id,
             name=playlist.name,
             owner_id=playlist.owner_id,

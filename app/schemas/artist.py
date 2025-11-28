@@ -12,7 +12,7 @@ class ArtistCreate(ArtistBase):
     pass
 
 
-class ArtistOut(ArtistBase):
+class ArtistResponse(ArtistBase):
     id: int
 
     class Config:

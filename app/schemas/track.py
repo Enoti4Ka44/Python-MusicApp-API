@@ -11,7 +11,7 @@ class TrackCreate(TrackBase):
     album_id: int
 
 
-class TrackOut(TrackBase):
+class TrackResponse(TrackBase):
     id: int
     album_id: int
 

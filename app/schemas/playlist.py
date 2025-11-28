@@ -12,7 +12,7 @@ class PlaylistCreate(PlaylistBase):
     track_ids: Optional[List[int]] = None
 
 
-class PlaylistOut(PlaylistBase):
+class PlaylistResponse(PlaylistBase):
     id: int
     owner_id: int
     track_ids: List[int] = []

@@ -11,7 +11,7 @@ class AlbumCreate(AlbumBase):
     artist_id: int
 
 
-class AlbumOut(AlbumBase):
+class AlbumResponse(AlbumBase):
     id: int
     artist_id: int
 
