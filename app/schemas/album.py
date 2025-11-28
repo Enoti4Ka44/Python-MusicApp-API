@@ -1,19 +1,19 @@
 from pydantic import BaseModel
-from typing import Optional
-
+from typing import Optional, List
+from datetime import date
 
 class AlbumBase(BaseModel):
     title: str
-    release_year: Optional[int] = None
-
 
 class AlbumCreate(AlbumBase):
-    artist_id: int
-
+    pass
 
 class AlbumResponse(AlbumBase):
     id: int
-    artist_id: int
+    release_date: date
+    owner_id: int
+    owner_name: str
+    track_ids: List[int] = []
 
     class Config:
         orm_mode = True

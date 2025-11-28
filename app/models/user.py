@@ -12,4 +12,6 @@ class User(Base):
     password_hash = Column(Text, nullable=False)
 
     playlists = relationship("Playlist", back_populates="owner")
+    albums = relationship("Album", back_populates="owner", cascade="all, delete")
+
 
