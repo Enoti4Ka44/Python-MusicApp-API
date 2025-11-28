@@ -69,6 +69,17 @@ async def update_playlist(
     return await PlaylistService.update_playlist(db, playlist_id, data, current_user.id)
 
 
+# Добавить трек в плейлист
+@router.post("/{playlist_id}/add-track/{track_id}")
+async def add_track(
+    playlist_id: int,
+    track_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await PlaylistService.add_track_to_playlist(db, playlist_id, track_id, current_user.id)
+
+
 # Удаление
 @router.delete("/{playlist_id}", status_code=204,
     summary="Delete playlist",

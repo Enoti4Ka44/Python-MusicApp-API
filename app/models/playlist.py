@@ -8,6 +8,7 @@ class Playlist(Base):
 
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
+    description = Column(String(500), nullable=True)
 
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     owner = relationship("User", back_populates="playlists")

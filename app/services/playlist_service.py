@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 from app.models import Playlist, PlaylistTrack, Track
 from app.schemas.playlist import PlaylistCreate, PlaylistResponse
@@ -46,9 +46,20 @@ class PlaylistService:
 
 
     @staticmethod
-    async def create_playlist(db: AsyncSession, data: PlaylistCreate, user_id: int):
+    async def create_playlist(db: AsyncSession, data: PlaylistCreate, user_id: int) -> PlaylistResponse:
+        result = await db.execute(
+            select(Playlist).where(Playlist.name == data.name, Playlist.owner_id == user_id)
+        )
+        existing_playlist = result.scalars().first()
+        if existing_playlist:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You already have a playlist with this title"
+            )
+        
         new_pl = Playlist(
             name=data.name,
+            description=data.description,
             owner_id=user_id
         )
         db.add(new_pl)
@@ -66,10 +77,10 @@ class PlaylistService:
         return PlaylistResponse(
             id=new_pl.id,
             name=new_pl.name,
+            description=new_pl.description,
             owner_id=new_pl.owner_id,
             track_ids=track_ids
         )
-
 
     @staticmethod
     async def get_user_playlists(db: AsyncSession, user_id: int):
@@ -85,6 +96,7 @@ class PlaylistService:
                 PlaylistResponse(
                     id=p.id,
                     name=p.name,
+                    description=p.description,
                     owner_id=p.owner_id,
                     track_ids=tracks
                 )
@@ -102,6 +114,7 @@ class PlaylistService:
         return PlaylistResponse(
             id=playlist.id,
             name=playlist.name,
+            description=playlist.description,
             owner_id=playlist.owner_id,
             track_ids=track_ids
         )
@@ -112,7 +125,22 @@ class PlaylistService:
         playlist = await PlaylistService.get_playlist_by_id(db, playlist_id)
         PlaylistService.check_access(playlist, user_id)
 
+        if data.name != playlist.name:
+            result = await db.execute(
+                select(Playlist).where(
+                    Playlist.name == data.name,
+                    Playlist.owner_id == user_id
+                )
+            )
+            existing = result.scalars().first()
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail="You already have a playlist with this name"
+                )
+
         playlist.name = data.name
+        playlist.description = data.description
 
         await db.execute(
             delete(PlaylistTrack).where(PlaylistTrack.playlist_id == playlist_id)
@@ -120,8 +148,8 @@ class PlaylistService:
 
         if data.track_ids:
             await PlaylistService.validate_tracks_exist(db, data.track_ids)
-            for t_id in data.track_ids:
-                db.add(PlaylistTrack(playlist_id=playlist_id, track_id=t_id))
+            for track_id in data.track_ids:
+                db.add(PlaylistTrack(playlist_id, track_id))
 
         await db.commit()
         await db.refresh(playlist)
@@ -131,9 +159,11 @@ class PlaylistService:
         return PlaylistResponse(
             id=playlist.id,
             name=playlist.name,
+            description=playlist.description,
             owner_id=playlist.owner_id,
             track_ids=track_ids
         )
+
 
 
     @staticmethod
@@ -143,3 +173,50 @@ class PlaylistService:
 
         await db.delete(playlist)
         await db.commit()
+
+        return {"message": "Track deleted"}
+    
+
+    @staticmethod
+    async def add_track_to_playlist(db: AsyncSession, playlist_id: int, track_id: int, user_id: int):
+
+        playlist = await PlaylistService.get_playlist_by_id(db, playlist_id)
+
+        PlaylistService.check_access(playlist, user_id)
+
+        result = await db.execute(
+            select(Track).where(Track.id == track_id)
+        )
+        track = result.scalars().first()
+
+        if not track:
+            raise HTTPException(status_code=404, detail="Track not found")
+
+        result = await db.execute(
+            select(PlaylistTrack).where(
+                PlaylistTrack.playlist_id == playlist_id,
+                PlaylistTrack.track_id == track_id
+            )
+        )
+        exists = result.scalars().first()
+
+        if exists:
+            raise HTTPException(status_code=400, detail="Track already in playlist")
+
+        new_record = PlaylistTrack(playlist_id, track_id)
+        db.add(new_record)
+
+        await db.commit()
+
+        result = await db.execute(
+            select(PlaylistTrack.track_id).where(
+                PlaylistTrack.playlist_id == playlist_id
+            )
+        )        
+        track_ids = [row[0] for row in result.all()]
+
+        return {
+            "playlist_id": playlist_id,
+            "track_ids": track_ids
+        }
+

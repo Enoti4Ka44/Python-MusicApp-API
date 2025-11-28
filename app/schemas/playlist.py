@@ -8,7 +8,6 @@ class PlaylistBase(BaseModel):
 
 
 class PlaylistCreate(PlaylistBase):
-    owner_id: int
     track_ids: Optional[List[int]] = None
 
 

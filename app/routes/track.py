@@ -32,11 +32,11 @@ async def get_my_tracks(
 
 # Получение информации о треке по id
 @router.get("/{track_id}", response_model=TrackResponse)
-async def get_track(
+async def get_track_by_id(
     track_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    return await TrackService.get_track(track_id, db)
+    return await TrackService.get_track_by_id(track_id, db)
 
 # Удаление трека
 @router.delete("/{track_id}")

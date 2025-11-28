@@ -30,7 +30,7 @@ class TrackService:
         await db.commit()
         await db.refresh(new_track)
 
-        await db.refresh(new_track.owner)  # чтобы owner.username точно был загружен
+        await db.refresh(new_track.owner) 
 
         return TrackResponse(
             id=new_track.id,
@@ -82,7 +82,7 @@ class TrackService:
         return responses
 
     @staticmethod
-    async def get_track(track_id: int, db: AsyncSession):
+    async def get_track_by_id(track_id: int, db: AsyncSession):
         result = await db.execute(
             select(Track)
             .options(joinedload(Track.owner))
@@ -107,7 +107,7 @@ class TrackService:
 
     @staticmethod
     async def delete_track(track_id: int, db: AsyncSession, user_id: int):
-        track_response = await TrackService.get_track(track_id, db)
+        track_response = await TrackService.get_track_by_id(track_id, db)
 
         if track_response.owner_id != user_id:
             raise HTTPException(
@@ -115,7 +115,6 @@ class TrackService:
                 detail="You can delete only your own tracks"
             )
 
-        # Получаем объект Track для удаления
         result = await db.execute(select(Track).where(Track.id == track_id))
         track = result.scalars().first()
 
