@@ -3,18 +3,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.auth.dependencies import get_current_user
-from app.schemas.playlist import PlaylistCreate, PlaylistResponse
+from app.schemas.playlist import PlaylistCreate, PlaylistResponse, PlaylistUpdate
 from app.models.user import User
 from app.services.playlist_service import PlaylistService
 
 router = APIRouter(prefix="/playlists", tags=["Playlists"])
 
-# Создание
+#Эндпоинт создания плейлиста
 @router.post("/", 
     response_model=PlaylistResponse,
-    summary="Create a new playlist",
     description=(
-        "Создает новый плейлист, пренадлежащий авторизованному юзеру. " 
+        "Создает новый плейлист. " 
         "Если track_id указаны, то они добавляются в плейлист "
     ))
 async def create_playlist(
@@ -25,11 +24,11 @@ async def create_playlist(
     return await PlaylistService.create_playlist(db, data, current_user.id)
 
 
-# Получить все плейлисты (свои)
+#Эндпоинт получения всех плейлистов
 @router.get("/", response_model=list[PlaylistResponse],
-    summary="Get all user playlists",
+    summary="Get User Playlists",
     description=(
-        "Возвращает список всех плейлистов, принадлежащих авторизованному юзеру. " 
+        "Возвращает список плейлистов пользователя" 
     ))
 async def get_playlists(
     current_user: User = Depends(get_current_user),
@@ -38,12 +37,11 @@ async def get_playlists(
     return await PlaylistService.get_user_playlists(db, current_user.id)
 
 
-# Получить плейлист по id
+#Эндпоинт получения плейлиста по id
 @router.get("/{playlist_id}", response_model=PlaylistResponse,
-    summary="Get playlist by ID",
+    summary="Get Playlist by ID",
     description=(
-        "Возвращает информацию о плейлисте, принадлежащему авторизованному юзеру. " 
-        "Иначе возвращает ошибку доступа "
+        "Возвращает информацию о плейлисте " 
     ))
 async def get_playlist(
     playlist_id: int,
@@ -53,24 +51,30 @@ async def get_playlist(
     return await PlaylistService.get_playlist(db, playlist_id, current_user.id)
 
 
-# Обновление
-@router.put("/{playlist_id}", response_model=PlaylistResponse,
+#Эндпоинт редактирования плейлиста
+@router.patch("/{playlist_id}", response_model=PlaylistResponse,
     summary="Update playlist",
     description=(
-        "Обновляет название и список треков плейлиста. " 
+        "Обновляет название, описание и список треков плейлиста. " 
         "Доступно только его владельцу"
     ))
 async def update_playlist(
     playlist_id: int,
-    data: PlaylistCreate,
+    data: PlaylistUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    return await PlaylistService.update_playlist(db, playlist_id, data, current_user.id)
+    payload = data.model_dump(exclude_unset=True)
+    return await PlaylistService.update_playlist(db, playlist_id, payload, current_user.id)
 
 
-# Добавить трек в плейлист
-@router.post("/{playlist_id}/add-track/{track_id}")
+#Эндпоинт добавления трека в плейлист
+@router.post("/{playlist_id}/add-track/{track_id}",
+    summary="Add Track to Playlist",
+    description=(
+        "Добавляет трек в плейлист. "
+        "Доступно только его владельцу" 
+    ))
 async def add_track(
     playlist_id: int,
     track_id: int,
@@ -82,9 +86,8 @@ async def add_track(
 
 # Удаление
 @router.delete("/{playlist_id}", status_code=204,
-    summary="Delete playlist",
     description=(
-        "Удаляет плейлист, пренадлежащий авторизованному пользователю. " 
+        "Удаляет плейлист. " 
         "Доступно только его владельцу"
     ))
 async def delete_playlist(

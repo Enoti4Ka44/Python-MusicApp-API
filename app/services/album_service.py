@@ -9,6 +9,7 @@ from app.schemas.album import AlbumCreate, AlbumResponse
 
 class AlbumService:
 
+#Функция создания альбома
     @staticmethod
     async def create_album(data: AlbumCreate, db: AsyncSession, user_id: int) -> AlbumResponse:
         result = await db.execute(
@@ -39,6 +40,8 @@ class AlbumService:
             track_ids=[]
         )
 
+
+#Функция получения альбома по id
     @staticmethod
     async def get_album(album_id: int, db: AsyncSession) -> AlbumResponse:
         result = await db.execute(
@@ -59,6 +62,8 @@ class AlbumService:
             track_ids=[t.id for t in album.tracks]
         )
     
+
+#Функция получения всех альбомов
     @staticmethod
     async def get_all_albums(db: AsyncSession) -> list[AlbumResponse]:
         result = await db.execute(
@@ -79,6 +84,8 @@ class AlbumService:
             for a in albums
         ]
 
+
+#Функция получения альбомов юзера
     @staticmethod
     async def get_user_albums(user_id: int, db: AsyncSession) -> list[AlbumResponse]:
         result = await db.execute(
@@ -100,6 +107,8 @@ class AlbumService:
             for a in albums
         ]
     
+
+#Функция удаления альбома
     @staticmethod
     async def delete_album(album_id: int, user_id: int, db: AsyncSession):
         result = await db.execute(select(Album).where(Album.id == album_id))

@@ -10,7 +10,12 @@ from app.auth.jwt_handler import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
-@router.post("/register", response_model=UserResponse)
+#Эндпоинт регистрации
+@router.post("/register", response_model=UserResponse,
+    summary="Register new user",
+    description=(
+        "Регистрирует нового пользователя" 
+    ))
 async def register_user(data: UserCreate, db: AsyncSession = Depends(get_db)):
     query = select(User).where(User.email == data.email)
     result = await db.execute(query)
@@ -34,9 +39,13 @@ async def register_user(data: UserCreate, db: AsyncSession = Depends(get_db)):
 
     return new_user
 
-
-@router.post("/login")
-async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
+#Эндпоинт логина
+@router.post("/login", 
+    summary="Login user",
+    description=(
+        "Авторизовывает пользователя" 
+    ))
+async def login(data: UserLogin, db: AsyncSession = Depends(get_db),):
     query = select(User).where(User.email == data.email)
     result = await db.execute(query)
     user = result.scalars().first()

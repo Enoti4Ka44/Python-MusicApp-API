@@ -10,6 +10,11 @@ class PlaylistBase(BaseModel):
 class PlaylistCreate(PlaylistBase):
     track_ids: Optional[List[int]] = None
 
+class PlaylistUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    track_ids: Optional[List[int]] = None
+
 
 class PlaylistResponse(PlaylistBase):
     id: int

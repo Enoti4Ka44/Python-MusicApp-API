@@ -8,6 +8,7 @@ from app.schemas.playlist import PlaylistCreate, PlaylistResponse
 
 class PlaylistService:
 
+#Функция получения плейлиста по id
     @staticmethod
     async def get_playlist_by_id(db: AsyncSession, playlist_id: int) -> Playlist:
         result = await db.execute(select(Playlist).where(Playlist.id == playlist_id))
@@ -18,24 +19,18 @@ class PlaylistService:
 
         return playlist
 
-
+#Функция проверки доступа
     @staticmethod
     def check_access(playlist: Playlist, user_id: int):
         if playlist.owner_id != user_id:
             raise HTTPException(status_code=403, detail="Access denied")
 
-
-    @staticmethod
-    async def get_track_ids(db: AsyncSession, playlist_id: int) -> list[int]:
-        result = await db.execute(
-            select(PlaylistTrack.track_id)
-            .where(PlaylistTrack.playlist_id == playlist_id)
-        )
-        return [r[0] for r in result.all()]
-
-
+#Функция проверки трека на существование
     @staticmethod
     async def validate_tracks_exist(db: AsyncSession, track_ids: list[int]):
+        if not track_ids:
+            return
+
         for track_id in track_ids:
             result = await db.execute(select(Track).where(Track.id == track_id))
             if not result.scalars().first():
@@ -43,45 +38,58 @@ class PlaylistService:
                     status_code=400,
                     detail=f"Track with id {track_id} does not exist"
                 )
+            
+#Функция получения трека по id
+    @staticmethod
+    async def get_track_ids(db: AsyncSession, playlist_id: int) -> list[int]:
+        result = await db.execute(
+            select(PlaylistTrack.track_id).where(PlaylistTrack.playlist_id == playlist_id)
+        )
+        return [row[0] for row in result.all()]
 
 
+#Функция создания плейлиста
     @staticmethod
     async def create_playlist(db: AsyncSession, data: PlaylistCreate, user_id: int) -> PlaylistResponse:
         result = await db.execute(
-            select(Playlist).where(Playlist.name == data.name, Playlist.owner_id == user_id)
+            select(Playlist).where(
+                Playlist.name == data.name,
+                Playlist.owner_id == user_id
+            )
         )
-        existing_playlist = result.scalars().first()
-        if existing_playlist:
+
+        if result.scalars().first():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="You already have a playlist with this title"
             )
-        
-        new_pl = Playlist(
+
+        playlist = Playlist(
             name=data.name,
             description=data.description,
             owner_id=user_id
         )
-        db.add(new_pl)
+        db.add(playlist)
         await db.commit()
-        await db.refresh(new_pl)
+        await db.refresh(playlist)
 
         if data.track_ids:
             await PlaylistService.validate_tracks_exist(db, data.track_ids)
             for t_id in data.track_ids:
-                db.add(PlaylistTrack(playlist_id=new_pl.id, track_id=t_id))
+                db.add(PlaylistTrack(playlist_id=playlist.id, track_id=t_id))
             await db.commit()
 
-        track_ids = await PlaylistService.get_track_ids(db, new_pl.id)
-
+        track_ids = await PlaylistService.get_track_ids(db, playlist.id)
         return PlaylistResponse(
-            id=new_pl.id,
-            name=new_pl.name,
-            description=new_pl.description,
-            owner_id=new_pl.owner_id,
+            id=playlist.id,
+            name=playlist.name,
+            description=playlist.description,
+            owner_id=playlist.owner_id,
             track_ids=track_ids
         )
 
+
+#Функция получения плейлистов юзера
     @staticmethod
     async def get_user_playlists(db: AsyncSession, user_id: int):
         result = await db.execute(
@@ -90,22 +98,24 @@ class PlaylistService:
         playlists = result.scalars().all()
 
         response = []
-        for p in playlists:
-            tracks = await PlaylistService.get_track_ids(db, p.id)
+        for playlist in playlists:
+            tracks = await PlaylistService.get_track_ids(db, playlist.id)
             response.append(
                 PlaylistResponse(
-                    id=p.id,
-                    name=p.name,
-                    description=p.description,
-                    owner_id=p.owner_id,
+                    id=playlist.id,
+                    name=playlist.name,
+                    description=playlist.description,
+                    owner_id=playlist.owner_id,
                     track_ids=tracks
                 )
             )
         return response
 
 
+#Функция получения плейлиста
     @staticmethod
     async def get_playlist(db: AsyncSession, playlist_id: int, user_id: int):
+
         playlist = await PlaylistService.get_playlist_by_id(db, playlist_id)
         PlaylistService.check_access(playlist, user_id)
 
@@ -120,36 +130,46 @@ class PlaylistService:
         )
 
 
+#Функция редактирования плейлиста
     @staticmethod
-    async def update_playlist(db: AsyncSession, playlist_id: int, data: PlaylistCreate, user_id: int):
+    async def update_playlist(db: AsyncSession, playlist_id: int, data: dict, user_id: int):
+
         playlist = await PlaylistService.get_playlist_by_id(db, playlist_id)
         PlaylistService.check_access(playlist, user_id)
 
-        if data.name != playlist.name:
+        if "name" in data and data["name"] != playlist.name:
             result = await db.execute(
                 select(Playlist).where(
-                    Playlist.name == data.name,
-                    Playlist.owner_id == user_id
+                    Playlist.name == data["name"],
+                    Playlist.owner_id == user_id,
+                    Playlist.id != playlist_id
                 )
             )
-            existing = result.scalars().first()
-            if existing:
+
+            if result.scalars().first():
                 raise HTTPException(
                     status_code=400,
                     detail="You already have a playlist with this name"
                 )
 
-        playlist.name = data.name
-        playlist.description = data.description
+            playlist.name = data["name"]
 
-        await db.execute(
-            delete(PlaylistTrack).where(PlaylistTrack.playlist_id == playlist_id)
-        )
+        if "description" in data:
+            playlist.description = data["description"]
 
-        if data.track_ids:
-            await PlaylistService.validate_tracks_exist(db, data.track_ids)
-            for track_id in data.track_ids:
-                db.add(PlaylistTrack(playlist_id, track_id))
+        if "track_ids" in data:
+            track_ids = data["track_ids"]
+            await db.execute(
+                delete(PlaylistTrack).where(PlaylistTrack.playlist_id == playlist_id)
+            )
+
+            if track_ids:
+                await PlaylistService.validate_tracks_exist(db, track_ids)
+                for track_id in track_ids:
+                    db.add(PlaylistTrack(
+                        playlist_id=playlist_id,
+                        track_id=track_id
+                    ))
 
         await db.commit()
         await db.refresh(playlist)
@@ -165,7 +185,7 @@ class PlaylistService:
         )
 
 
-
+#Функция удаления плейлиста
     @staticmethod
     async def delete_playlist(db: AsyncSession, playlist_id: int, user_id: int):
         playlist = await PlaylistService.get_playlist_by_id(db, playlist_id)
@@ -174,19 +194,17 @@ class PlaylistService:
         await db.delete(playlist)
         await db.commit()
 
-        return {"message": "Track deleted"}
-    
+        return {"message": "Playlist deleted"}
 
+
+#Функция добавления трека в плейлист
     @staticmethod
     async def add_track_to_playlist(db: AsyncSession, playlist_id: int, track_id: int, user_id: int):
 
         playlist = await PlaylistService.get_playlist_by_id(db, playlist_id)
-
         PlaylistService.check_access(playlist, user_id)
 
-        result = await db.execute(
-            select(Track).where(Track.id == track_id)
-        )
+        result = await db.execute(select(Track).where(Track.id == track_id))
         track = result.scalars().first()
 
         if not track:
@@ -198,25 +216,19 @@ class PlaylistService:
                 PlaylistTrack.track_id == track_id
             )
         )
-        exists = result.scalars().first()
-
-        if exists:
+        if result.scalars().first():
             raise HTTPException(status_code=400, detail="Track already in playlist")
 
-        new_record = PlaylistTrack(playlist_id, track_id)
-        db.add(new_record)
-
+        new_link = PlaylistTrack(
+            playlist_id=playlist_id,
+            track_id=track_id
+        )
+        db.add(new_link)
         await db.commit()
 
-        result = await db.execute(
-            select(PlaylistTrack.track_id).where(
-                PlaylistTrack.playlist_id == playlist_id
-            )
-        )        
-        track_ids = [row[0] for row in result.all()]
+        track_ids = await PlaylistService.get_track_ids(db, playlist_id)
 
         return {
             "playlist_id": playlist_id,
             "track_ids": track_ids
         }
-

@@ -8,6 +8,7 @@ from sqlalchemy.orm import joinedload
 
 class TrackService:
 
+#Функция создания трека
     @staticmethod
     async def create_track(data: TrackCreate, db: AsyncSession, user_id: int):
         if data.album_id is not None:
@@ -41,6 +42,8 @@ class TrackService:
             owner_name=new_track.owner.username
         )
 
+
+#Функция получения всех треков
     @staticmethod
     async def get_all_tracks(db: AsyncSession):
         result = await db.execute(
@@ -61,6 +64,7 @@ class TrackService:
         ]
         return responses
 
+#Функция получения треков юзера
     @staticmethod
     async def get_user_tracks(db: AsyncSession, user_id: int):
         result = await db.execute(select(Track).where(Track.owner_id == user_id))
@@ -81,6 +85,8 @@ class TrackService:
             )
         return responses
 
+
+#Функция получения трека по id
     @staticmethod
     async def get_track_by_id(track_id: int, db: AsyncSession):
         result = await db.execute(
@@ -105,6 +111,8 @@ class TrackService:
             owner_name=track.owner.username
         )
 
+
+#Функция удаления трека
     @staticmethod
     async def delete_track(track_id: int, db: AsyncSession, user_id: int):
         track_response = await TrackService.get_track_by_id(track_id, db)

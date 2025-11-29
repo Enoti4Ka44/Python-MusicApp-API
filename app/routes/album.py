@@ -7,7 +7,11 @@ from app.schemas.album import AlbumCreate, AlbumResponse
 
 router = APIRouter(prefix="/albums", tags=["Albums"])
 
-@router.post("/", response_model=AlbumResponse)
+#Эндпоинт создания альбома
+@router.post("/", response_model=AlbumResponse,
+    description=(
+        "Создает новый альбом" 
+    ))
 async def create_album(
     album: AlbumCreate,
     db: AsyncSession = Depends(get_db),
@@ -15,22 +19,40 @@ async def create_album(
 ):
     return await AlbumService.create_album(album, db, user.id)
 
-@router.get("/all", response_model=list[AlbumResponse])
+#Эндпоинт получения всех альбомов
+@router.get("/", response_model=list[AlbumResponse],
+    description=(
+        "Возвращает список всех альбомов " 
+    ))
 async def get_all_albums(db: AsyncSession = Depends(get_db)):
     return await AlbumService.get_all_albums(db)
 
-
-@router.get("/my", response_model=list[AlbumResponse])
+#Эндпоинт получения альбомов юзера
+@router.get("/my", response_model=list[AlbumResponse],
+    summary="Get User Albums",
+    description=(
+        "Возвращает список альбомов пользователя " 
+    ))
 async def get_user_albums(
     db: AsyncSession = Depends(get_db),
     user=Depends(get_current_user)
 ):
     return await AlbumService.get_user_albums(user.id, db)
 
-@router.get("/{album_id}", response_model=AlbumResponse)
+#Эндпоинт получения альбома по id
+@router.get("/{album_id}", response_model=AlbumResponse,
+    summary="Get Album by ID",
+    description=(
+        "Возвращает информацию об альбоме " 
+    ))
 async def get_album(album_id: int, db: AsyncSession = Depends(get_db)):
     return await AlbumService.get_album(album_id, db)
 
-@router.delete("/{album_id}")
+#Эндпоинт удаления альбома
+@router.delete("/{album_id}",
+               description=(
+        "Удаляет альбом. " 
+        "Доступно только его владельцу"
+    ))
 async def delete_album(album_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     return await AlbumService.delete_album(album_id, user.id, db)
