@@ -11,6 +11,20 @@ class TrackService:
 #Функция создания трека
     @staticmethod
     async def create_track(data: TrackCreate, db: AsyncSession, user_id: int):
+        result = await db.execute(
+        select(Track).where(
+            Track.title == data.title,
+            Track.owner_id == user_id
+            )
+        )
+        existing = result.scalars().first()
+
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You already have a track with this title"
+            )
+    
         if data.album_id is not None:
             result = await db.execute(select(Album).where(Album.id == data.album_id))
             album = result.scalars().first()
@@ -30,7 +44,6 @@ class TrackService:
         db.add(new_track)
         await db.commit()
         await db.refresh(new_track)
-
         await db.refresh(new_track.owner) 
 
         return TrackResponse(
