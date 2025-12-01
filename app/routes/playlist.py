@@ -83,8 +83,24 @@ async def add_track(
 ):
     return await PlaylistService.add_track_to_playlist(db, playlist_id, track_id, current_user.id)
 
+#Удаление трека из плейлиста
+@router.delete("/{playlist_id}/remove-track/{track_id}",
+    summary="Remove Track from Playlist",
+    description=(
+        "Удаляет трек из плейлиста. " 
+        "Доступно только его владельцу"
+    ))
+async def remove_track(
+    playlist_id: int,
+    track_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return await PlaylistService.remove_track_from_playlist(
+        db, playlist_id, track_id, current_user.id
+    )
 
-# Удаление
+#Удаление
 @router.delete("/{playlist_id}", status_code=204,
     description=(
         "Удаляет плейлист. " 
@@ -96,3 +112,6 @@ async def delete_playlist(
     db: AsyncSession = Depends(get_db)
 ):
     return await PlaylistService.delete_playlist(db, playlist_id, current_user.id)
+
+
+

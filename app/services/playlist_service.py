@@ -232,3 +232,31 @@ class PlaylistService:
             "playlist_id": playlist_id,
             "track_ids": track_ids
         }
+
+#Функция удаления трека из плейлиста
+    @staticmethod
+    async def remove_track_from_playlist(db: AsyncSession, playlist_id: int, track_id: int, user_id: int):
+
+        playlist = await PlaylistService.get_playlist_by_id(db, playlist_id)
+        PlaylistService.check_access(playlist, user_id)
+
+        result = await db.execute(
+            select(PlaylistTrack).where(
+                PlaylistTrack.playlist_id == playlist_id,
+                PlaylistTrack.track_id == track_id
+            )
+        )
+        link = result.scalars().first()
+
+        if not link:
+            raise HTTPException(status_code=404, detail="Track not in playlist")
+
+        await db.delete(link)
+        await db.commit()
+
+        track_ids = await PlaylistService.get_track_ids(db, playlist_id)
+
+        return {
+            "playlist_id": playlist_id,
+            "track_ids": track_ids
+        }
