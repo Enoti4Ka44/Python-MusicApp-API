@@ -111,4 +111,11 @@ http://127.0.0.1:8000/docs#/
 
 ---
 
+## 🌐 API
+
+API доступен на сервере по адресу [https://python-musicapp-api.onrender.com](https://python-musicapp-api.onrender.com)  
+Документация Swagger [https://python-musicapp-api.onrender.com/docs#/](https://python-musicapp-api.onrender.com/docs#/)  
+
+---  
+
 Учебный проект, разработан для практики FastAPI и SQLAlchemy.
